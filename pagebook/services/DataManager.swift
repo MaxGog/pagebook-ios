@@ -7,24 +7,27 @@
 
 import Foundation
 import SwiftUI
+import CoreData
 
 class DataManager: ObservableObject {
     static let shared = DataManager()
     
-    // Для показа алертов в SwiftUI
     @Published var alertMessage: String = ""
     @Published var showAlert: Bool = false
     
     func exportData() {
-        let sampleData = "Ваши данные для экспорта\nЗаметки, задачи и т.д."
-        print("Данные для экспорта:\n\(sampleData)")
-        
-        #if os(iOS)
-        // Для iOS можно использовать ShareSheet
-        showAlert(message: "Функция экспорта данных будет реализована в следующем обновлении")
-        #elseif os(macOS)
-        saveToFile(content: sampleData, filename: "pagebook_export.txt")
-        #endif
+        let context = PersistenceController.shared.container.viewContext
+        let fetchRequest: NSFetchRequest<NoteEntity> = NoteEntity.fetchRequest()
+        do {
+            let notes = try context.fetch(fetchRequest)
+            let notesData = notes.map { note in
+                ["title": note.title ?? "", "content": note.content ?? ""]
+            }
+            let jsonData = try JSONSerialization.data(withJSONObject: notesData, options: .prettyPrinted)
+            showAlert(message: "Данные экспортированы (заглушка)")
+        } catch {
+            showAlert(message: "Ошибка экспорта: \(error.localizedDescription)")
+        }
     }
     
     func createBackup() {
