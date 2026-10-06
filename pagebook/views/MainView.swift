@@ -7,56 +7,57 @@
 import SwiftUI
 
 struct MainView: View {
-    private enum Tab: Hashable {
-        case notes
-        case tasks
-        case calendar
-        case settings
-    }
-    
-    @State private var selectedTab: Tab = .notes
+    @State private var selectedSection: Section? = .notes
     @EnvironmentObject var settings: Settings
     
+    enum Section: String, CaseIterable, Identifiable {
+        case notes = "Заметки"
+        case tasks = "Задачи"
+        case calendar = "Календарь"
+        case settings = "Настройки"
+        
+        var id: String { self.rawValue }
+        
+        var iconName: String {
+            switch self {
+            case .notes: return "note.text"
+            case .tasks: return "checklist"
+            case .calendar: return "calendar"
+            case .settings: return "gear"
+            }
+        }
+    }
+    
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NotesView()
-                .tabItem {
-                    Label("Заметки", systemImage: "note.text")
-                }
-                .tag(Tab.notes)
-            
-            TasksView()
-                .tabItem {
-                    Label("Задачи", systemImage: "checklist")
-                }
-                .tag(Tab.tasks)
-            
-            CalendarView()
-                .tabItem {
-                    Label("Календарь", systemImage: "calendar")
-                }
-                .tag(Tab.calendar)
-            
-            SettingsView()
-                .tabItem {
-                    Label("Настройки", systemImage: "gear")
-                }
-                .tag(Tab.settings)
+        NavigationSplitView {
+            List(Section.allCases, selection: $selectedSection) { section in
+                Label(section.rawValue, systemImage: section.iconName)
+                    .tag(section)
+            }
+            .navigationTitle("Pagebook")
+        } detail: {
+            if let section = selectedSection {
+                detailView(for: section)
+                    .navigationTitle(section.rawValue)
+            } else {
+                Text("Выберите раздел")
+                    .foregroundColor(.secondary)
+            }
         }
         .accentColor(settings.accentColorValue)
-        .onAppear {
-            applyTheme()
-        }
-        .onChange(of: settings.isDarkMode) { _ in
-            applyTheme()
+    }
+    
+    @ViewBuilder
+    private func detailView(for section: Section) -> some View {
+        switch section {
+        case .notes:
+            NotesView()
+        case .tasks:
+            TasksView()
+        case .calendar:
+            CalendarView()
+        case .settings:
+            SettingsView()
         }
     }
-}
-
-private func applyTheme() {
-    #if os(iOS)
-    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-        windowScene.windows.first?.overrideUserInterfaceStyle = settings.isDarkMode ? .dark : .light
-    }
-    #endif
 }
